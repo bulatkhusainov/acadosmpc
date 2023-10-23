@@ -42,13 +42,24 @@ function compile_sim_shared_lib(export_dir)
         end
     else
         % compile on Windows platform
-        [ status, result ] = system('cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_ACADOS_SIM_SOLVER_LIB=ON -DBUILD_ACADOS_OCP_SOLVER_LIB=OFF -S . -B .');
+        mexOpts = mex.getCompilerConfigurations('C', 'Selected');
+        if strcmp(mexOpts.ShortName, 'MSVC150')
+            mexCompiler = 'Visual Studio 15 2017 Win64';
+        elseif strcmp(mexOpts.ShortName, 'MSVC160')
+            mexCompiler = 'Visual Studio 16 2019';
+        else
+            mexCompiler = 'MinGW Makefiles';
+        end
+        [ status, result ] = system(['cmake -G "' mexCompiler '" -DCMAKE_BUILD_TYPE=Release -DBUILD_ACADOS_SIM_SOLVER_LIB=ON -DBUILD_ACADOS_OCP_SOLVER_LIB=OFF -S . -B .']);
         if status
             cd(return_dir);
             error('Generating buildsystem failed.\nGot status %d, result: %s',...
                   status, result);
         end
         [ status, result ] = system('cmake --build . --config Release');
+        if strcmp(mexOpts.ShortName, 'MSVC150') || strcmp(mexOpts.ShortName, 'MSVC160')
+            movefile('Release/*','.');
+        end
         if status
             cd(return_dir);
             error('Building templated code as shared library failed.\nGot status %d, result: %s',...
